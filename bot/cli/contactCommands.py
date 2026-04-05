@@ -39,7 +39,6 @@ def change_name(args, book: AddressBook):
     contact = book.find_by_name(old_name)
     if contact:
         contact.edit_name(new_name)
-        # Оновлюємо ключ у словнику
         book.data[new_name] = contact
         del book.data[old_name]
         return f"✅ Name updated from '{old_name}' to '{new_name}'."
@@ -63,7 +62,7 @@ def show_all(book: AddressBook):
 
 # PHONE COMMANDS
 @logger.input_error
-def change_phone(args, book: AddressBook): # edit-phone
+def change_phone(args, book: AddressBook):
     name, old_number, new_number = args
     contact = book.find_by_name(name)
     if contact:
