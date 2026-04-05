@@ -1,9 +1,9 @@
 import bot.helpers.storage as storage
 import bot.cli.contactCommands as contact
 import bot.cli.noteCommands as note
-import bot.navigation.subMenus as subMenu
-from bot.models.Record import Record
+import bot.cli.tagCommands as tag
 from bot.helpers.parse_input import parse_input
+from bot.helpers.help_commands import help_commands
 
 
 def main():
@@ -143,6 +143,9 @@ def main():
                 # Usage: edit-note [id] [new text...]
                 # Example: edit-note a1b2 Buy milk, eggs, and bread
                 print(note.edit_note(args, notes))
+
+            elif command == "help":
+                print(help_commands())
                 
             else:
                 print("Invalid command. Enter 'help' to see all commands.")
