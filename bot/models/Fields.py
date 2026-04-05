@@ -50,3 +50,9 @@ class Birthday(Field):
 
 class Id(Field):
     pass
+
+class Tag(Field):
+    def __init__(self, value: str):
+        if not value or not value.strip() or " " in value:
+            raise ValueError("Tag must be a single word without spaces.")
+        super().__init__(value.strip().lower())

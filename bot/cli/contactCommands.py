@@ -1,76 +1,156 @@
-
 import bot.helpers.logger as logger
 from bot.models.AddressBook import AddressBook
 from bot.models.Record import Record
-import questionary
-
+from bot.models.Errors import NotFoundError
 
 # CONTACT COMMANDS
 @logger.input_error
 def add_contact(args, book: AddressBook):
-    name, phone, *_ = args
-    existing_record = book.find_by_name(name)
+    if not args:
+        raise ValueError("❌ Please provide a name.")
     
-    if existing_record:
-        return existing_record
-
-    if len(name) > 1:
-        new_record = Record(name)
-        book.add_record(new_record)
-        if phone:
-            new_record.add_phone(phone)
-        return f"✅ Contact '{name}' added."
-    raise ValueError(f'Name should contain at least 1 letter')
-
-@logger.input_error
-def delete_contact(record, book: AddressBook):
-    book.delete(record.name.value)
-    return f"✅ Contact {record.name.value} deleted."
-
-@logger.input_error
-def edit_contact_name(record, new_name):
-    if new_name:
-        record.edit_name(new_name)
-        return "✅ Name updated."
-    raise ValueError("❌ Name cannot be empty.")
+    name = args[0]
+    phone = args[1] if len(args) > 1 else None 
+    
+    contact = book.find_by_name(name)
+    message = f"✅ Contact '{name}' updated."
+    
+    if contact is None:
+        contact = Record(name)
+        book.add_record(contact)
+        message = f"✅ Contact '{name}' added."
+        
+    if phone:
+        contact.add_phone(phone)
+    return message
 
 @logger.input_error
-def add_phone(record):
-    new_val = questionary.text("Enter new phone number:").ask()
-    if new_val:
-        record.add_phone(new_val)
-        return f"✅ Phone added!"
-    raise ValueError("❌ Phone cannot be empty.")
+def remove_contact(args, book: AddressBook):
+    name = args[0]
+    contact = book.find_by_name(name)
+    if contact:
+        book.delete(name)
+        return f"✅ Contact '{name}' removed."
+    raise NotFoundError(f"❌ Contact '{name}' not found.")
 
 @logger.input_error
-def edit_phone(record, phone, new_val):
-    if new_val:
-        record.edit_phone(phone.value, new_val)
-        return "✅ Phone updated!"
-    raise ValueError("❌ Phone cannot be updated.")
+def change_name(args, book: AddressBook):
+    old_name, new_name = args
+    contact = book.find_by_name(old_name)
+    if contact:
+        contact.edit_name(new_name)
+        # Оновлюємо ключ у словнику
+        book.data[new_name] = contact
+        del book.data[old_name]
+        return f"✅ Name updated from '{old_name}' to '{new_name}'."
+    raise NotFoundError(f"❌ Contact '{old_name}' not found.")
 
 @logger.input_error
-def delete_phone(record, phone):
-    record.remove_phone(phone.value)
-    return f"🗑️ Phone deleted."
+def search_contact(args, book: AddressBook):
+    query = " ".join(args)
+    results = book.search(query)
+    if results:
+        return "\n".join(str(r) for r in results)
+    return f"🔍 No contacts found matching '{query}'."
 
-@logger.input_error
-def append_phone_to_existing(record, phone):
-    record.add_phone(phone)
-    return f"✅ Phone added to existing contact '{record.name.value}'."
-
-@logger.input_error
 def show_all(book: AddressBook):
     if not book.data:
-        return "No contacts found."
+        return "📭 No contacts found."
     result = []
     for i, contact in enumerate(book.data.values(), 1):
-        result.append(f"{contact}")
+        result.append(f"{i} | {contact}")
     return "\n".join(result)
+
+# PHONE COMMANDS
+@logger.input_error
+def change_phone(args, book: AddressBook): # edit-phone
+    name, old_number, new_number = args
+    contact = book.find_by_name(name)
+    if contact:
+        contact.edit_phone(old_number, new_number)
+        return f"✅ Phone updated for '{name}'."
+    raise NotFoundError(f"❌ Contact '{name}' not found.")
+    
+@logger.input_error
+def remove_phone(args, book: AddressBook):
+    name, number = args
+    contact = book.find_by_name(name)
+    if contact:
+        contact.remove_phone(number)
+        return f"✅ Phone '{number}' removed from '{name}'."
+    raise NotFoundError(f"❌ Contact '{name}' not found.")
+
+@logger.input_error
+def show_phone(args, book: AddressBook):
+    name = args[0]
+    contact = book.find_by_name(name)
+    if contact:
+        phones = "; ".join(p.value for p in contact.phones)
+        return f"📞 {name}'s phones: {phones}" if phones else f"'{name}' has no phones."
+    raise KeyError
+
+# BIRTHDAY COMMANDS
+@logger.input_error
+def add_birthday(args, book: AddressBook):
+    name, birthday = args
+    contact = book.find_by_name(name)
+    if contact:
+        contact.add_birthday(birthday)
+        return f"✅ Birthday added/updated for '{name}'."
+    raise NotFoundError("❌ Contact not found.")
+
+@logger.input_error
+def remove_birthday(args, book: AddressBook):
+    name = args[0]
+    contact = book.find_by_name(name)
+    if contact:
+        contact.remove_birthday()
+        return f"✅ Birthday removed for '{name}'."
+    raise NotFoundError("❌ Contact not found.")
 
 def birthdays(book: AddressBook):
     upcoming = book.get_upcoming_birthdays()
     if not upcoming:
         return "No upcoming birthdays in the next week."
-    print("Upcoming birthdays in next 7 days:")
-    return "\n".join(f"{item['name']}: {item['congratulation_date']}" for item in upcoming)
+    result = ["Upcoming birthdays in next 7 days:"]
+    result.extend(f"🎂 {item['name']}: {item['congratulation_date']}" for item in upcoming)
+    return "\n".join(result)
+
+# EMAIL COMMANDS
+@logger.input_error
+def add_email(args, book: AddressBook):
+    name, email = args
+    contact = book.find_by_name(name)
+    if contact:
+        contact.add_email(email) # Працюватиме і для change-email
+        return f"✅ Email updated for '{name}'."
+    raise NotFoundError("❌ Contact not found.")
+
+@logger.input_error
+def remove_email(args, book: AddressBook):
+    name = args[0]
+    contact = book.find_by_name(name)
+    if contact:
+        contact.remove_email()
+        return f"✅ Email removed for '{name}'."
+    raise NotFoundError("❌ Contact not found.")
+
+# ADDRESS COMMANDS
+@logger.input_error
+def add_address(args, book: AddressBook):
+    name = args[0]
+    address = " ".join(args[1:])
+    contact = book.find_by_name(name)
+    if contact:
+        contact.add_address(address)
+        return f"✅ Address updated for '{name}'."
+    raise NotFoundError("❌ Contact not found.")
+
+@logger.input_error
+def remove_address(args, book: AddressBook):
+    name = args[0]
+    contact = book.find_by_name(name)
+    if contact:
+        contact.remove_address()
+        return f"✅ Address removed for '{name}'."
+    raise NotFoundError("❌ Contact not found.")

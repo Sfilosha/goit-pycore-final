@@ -6,9 +6,11 @@ class NoteBook(UserDict):
     def add_record(self, note: Note):
         self.data[note.id] = note
 
-    def find(self, value: str) -> Note:
-        # Search by 100% text match
-        return self.data.get(value)
+    def find_by_id(self, note_id: str) -> Note:
+        for key, note in self.data.items():
+            if str(key) == str(note_id):
+                return note
+        return None
     
     def search(self, query: str) -> list:
         # Search by id and text
@@ -25,13 +27,8 @@ class NoteBook(UserDict):
         return results
 
     def delete(self, id: str):
-        key_to_delete = None
-        for key, note in self.data.items():
-            if str(note.id) == str(id):
-                key_to_delete = key
-                break
-        if key_to_delete:
-            del self.data[key_to_delete]
+        if id in self.data:
+            del self.data[id]
 
     def __repr__(self):
         return f"NoteBook(total_notes={len(self.data)})"

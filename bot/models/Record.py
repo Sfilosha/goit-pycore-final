@@ -1,4 +1,4 @@
-from .Fields import Phone, Name, Birthday, Id, Email, Address
+from .Fields import Phone, Name, Birthday, Id, Email, Address, Tag
 from nanoid import generate as generateId
 
 class Record:
@@ -9,6 +9,7 @@ class Record:
         self.birthday = None
         self.address = None
         self.email = None
+        self.tags = []
 
     def add_phone(self, number: str):
         self.phones.append(Phone(number))
@@ -27,6 +28,7 @@ class Record:
         old_phone_number = self.find_phone(old_number)
         if not old_phone_number:
             raise ValueError(f"Phone number {old_number} not found.")
+        
         new_phone_number = Phone(new_number)
         old_phone_number.value = new_phone_number.value
     
@@ -46,24 +48,28 @@ class Record:
         self.email = Email(email)
     
     def remove_email(self):
-        if not self.email:
-            return None
         self.email = None
-        
-    def change_email(self, address: str):
-        self.email.value = address
 
     def add_address(self, address: str):
         self.address = Address(address)
     
     def remove_address(self):
-        if not self.address:
-            return None
         self.address = None
 
-    def change_address(self, address: str):
-        self.address.value = address
-    
+    def add_tag(self, tag_value: str):
+        normalized_tag = tag_value.strip().lower()
+        if any(t.value == normalized_tag for t in self.tags):
+            raise ValueError(f"Tag '{normalized_tag}' already exists for this contact.")
+        self.tags.append(Tag(normalized_tag))
+
+    def remove_tag(self, tag_value: str):
+        normalized_tag = tag_value.strip().lower()
+        tag_to_remove = next((t for t in self.tags if t.value == normalized_tag), None)
+        if tag_to_remove:
+            self.tags.remove(tag_to_remove)
+        else:
+            raise ValueError(f"Tag '{normalized_tag}' not found in this contact.")
 
     def __str__(self):
-        return f"{self.id} | {self.name} | phones: {'; '.join(p.value for p in self.phones)} | birthday: {self.birthday} | email: {self.email} | address: {self.address}"
+        tags_str = ", ".join(f"#{t.value}" for t in self.tags) if self.tags else "No tags"
+        return f"{self.id} | {self.name} | phones: {'; '.join(p.value for p in self.phones)} | birthday: {self.birthday} | email: {self.email} | address: {self.address} | tags: {tags_str}"
